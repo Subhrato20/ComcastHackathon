@@ -3,17 +3,140 @@ import { Send, RefreshCcw, Zap, Sun, Eye } from 'lucide-react';
 import axios from 'axios';
 import './SmartSearch.css';
 import Card from './Card'; // Import the Card component
+import VoicePrompt from './VoicePrompt'; // Import the VoicePrompt component
 
-const SmartSearch = () => {
+const SmartSearch = ({ onLoadChat }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentMessage, setCurrentMessage] = useState('');
   const [charIndex, setCharIndex] = useState(0);
-  const [showCard, setShowCard] = useState(false); // State to control Card visibility
+  const [chatId, setChatId] = useState(() => Date.now().toString());
 
   const chatMainRef = useRef(null);
   const API_BASE_URL = 'http://localhost:3000/api/chat';
+
+  // Save chat to localStorage whenever messages change
+  useEffect(() => {
+    // Only save if there are messages
+    if (messages.length > 0) {
+      // Get existing chats from localStorage
+      const existingChatsJSON = localStorage.getItem('chatHistory');
+      const existingChats = existingChatsJSON ? JSON.parse(existingChatsJSON) : [];
+      
+      // Generate a title based on the first user message
+      let chatTitle = "New Chat";
+      const firstUserMessage = messages.find(msg => msg.user);
+      if (firstUserMessage) {
+        chatTitle = firstUserMessage.text.substring(0, 25);
+        if (firstUserMessage.text.length > 25) chatTitle += "...";
+      }
+      
+      // Create a chat object
+      const chatToSave = {
+        id: chatId,
+        title: chatTitle,
+        messages: messages,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Check if this chat already exists by ID
+      const existingChatIndex = existingChats.findIndex(chat => chat.id === chatId);
+      
+      if (existingChatIndex !== -1) {
+        // Update the existing chat
+        existingChats[existingChatIndex] = chatToSave;
+      } else {
+        // Add new chat to beginning of array
+        existingChats.unshift(chatToSave);
+      }
+      
+      // Limit to 10 chats to prevent localStorage from getting too full
+      const limitedChats = existingChats.slice(0, 10);
+      localStorage.setItem('chatHistory', JSON.stringify(limitedChats));
+    }
+  }, [messages, chatId]);
+
+  // Function to load a chat from history
+  const loadChatFromHistory = (historyChatId) => {
+    const existingChatsJSON = localStorage.getItem('chatHistory');
+    if (existingChatsJSON) {
+      const existingChats = JSON.parse(existingChatsJSON);
+      const chatToLoad = existingChats.find(chat => chat.id === historyChatId);
+      
+      if (chatToLoad) {
+        setMessages(chatToLoad.messages);
+        setChatId(chatToLoad.id);
+        
+        // If there are bot messages, set the last one as current
+        const lastBotMessage = [...chatToLoad.messages]
+          .reverse()
+          .find(msg => !msg.user);
+          
+        if (lastBotMessage) {
+          setCurrentMessage(lastBotMessage.text);
+          setCharIndex(lastBotMessage.text.length); // Show full message immediately
+        }
+        
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Make the loadChatFromHistory function available to parent components
+  useEffect(() => {
+    if (onLoadChat) {
+      onLoadChat(loadChatFromHistory);
+    }
+  }, [onLoadChat]);
+
+  // Function to check if a message should show sources
+  const shouldShowSources = (messageText) => {
+    // List of keywords that indicate we should show sources
+    const sourceKeywords = [
+      'xfinity', 'internet', 'provider', 'faster', 'speed', 'connection',
+      'wifi', 'broadband', 'fiber', 'cable', 'service', 'plan', 'package'
+    ];
+    
+    const lowerText = messageText.toLowerCase();
+    
+    // Check if any of the keywords are in the message
+    return sourceKeywords.some(keyword => lowerText.includes(keyword));
+  };
+
+  // Hardcoded sample sources for development
+  const getSampleSources = () => {
+    return {
+      sources: [
+        {
+          id: 1,
+          title: "Xfinity Gigabit Internet",
+          url: "https://www.xfinity.com/learn/internet-service/gigabit",
+          domain: "xfinity.com",
+          logo: "/api/placeholder/24/24",
+          brief: "Up to 1,200 Mbps download speeds"
+        },
+        {
+          id: 2,
+          title: "Xfinity Internet Plans Comparison",
+          url: "https://www.xfinity.com/learn/internet-service",
+          domain: "xfinity.com",
+          logo: "/api/placeholder/24/24",
+          brief: "Compare different Xfinity internet plans"
+        },
+        {
+          id: 3,
+          title: "Is Xfinity Internet Worth It?",
+          url: "https://www.reviews.org/internet-service/xfinity-internet-review/",
+          domain: "reviews.org",
+          logo: "/api/placeholder/24/24",
+          brief: "Independent review of Xfinity internet service"
+        }
+      ],
+      additionalSources: 4
+    };
+  };
 
   const sendMessageToBackend = async (message) => {
     try {
@@ -35,11 +158,24 @@ const SmartSearch = () => {
 
     try {
       const response = await sendMessageToBackend(messageText);
-      const botMessage = { text: response.response, user: false };
+      
+      // Check if we should show sources for this message
+      const showSources = shouldShowSources(messageText);
+      
+      // Get sample sources if needed
+      const sources = showSources ? getSampleSources() : null;
+      
+      // Create bot message with sources if applicable
+      const botMessage = { 
+        text: response.response, 
+        user: false,
+        showSources: showSources,
+        sources: sources
+      };
+      
       setMessages(prevMessages => [...prevMessages, botMessage]);
       setCurrentMessage(botMessage.text);
       setCharIndex(0);
-      setShowCard(true); // Show the card when a response is received
     } catch (error) {
       console.error('Error in sendMessage:', error);
       const errorMessage = { text: "Sorry, I couldn't process that request.", user: false };
@@ -77,7 +213,8 @@ const SmartSearch = () => {
     setIsLoading(false);
     setCurrentMessage('');
     setCharIndex(0);
-    setShowCard(false); // Hide the card when refreshing
+    // Generate a new chatId for the next conversation
+    setChatId(Date.now().toString());
     console.log('Chat refreshed');
   };
 
@@ -111,15 +248,11 @@ const SmartSearch = () => {
   return (
     <div className="chat-container">
       <header className="chat-header">
-        <h1>Insight Chat</h1>
+        <h1>SmartSearch.ai</h1>
         <button onClick={handleRefresh} className="refresh-button" aria-label="Refresh chat">
           <RefreshCcw size={24} />
         </button>
       </header>
-      
-      {/* Card Component - shown conditionally */}
-      {showCard && <Card />}
-      
       <main className="chat-main" ref={chatMainRef}>
         {messages.length === 0 ? (
           <div className="suggestion-buttons">
@@ -140,8 +273,28 @@ const SmartSearch = () => {
           <div className="message-list">
             {messages.map((message, index) => (
               <div key={index} className={`message ${message.user ? 'user-message' : 'bot-message'}`}>
-                {message.user ? formatMessage(message.text) : 
-                  (index === messages.length - 1 ? formatMessage(displayedText) : formatMessage(message.text))}
+                {message.user ? (
+                  // User message - just show the text
+                  formatMessage(message.text)
+                ) : (
+                  // Bot message - first sources (if applicable), then text
+                  <div className="bot-message-content">
+                    {/* Show sources if this message has them and typing is complete */}
+                    {message.showSources && message.sources && 
+                     (index !== messages.length - 1 || displayedText === message.text) && (
+                      <div className="sources-wrapper">
+                        <Card sources={message.sources.sources} />
+                      </div>
+                    )}
+                    
+                    {/* Bot message text */}
+                    <div className="bot-text">
+                      {index === messages.length - 1 ? 
+                        formatMessage(displayedText) : 
+                        formatMessage(message.text)}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
             {isLoading && <div className="message bot-message">Thinking...</div>}
@@ -158,8 +311,9 @@ const SmartSearch = () => {
           className="message-input"
           disabled={isLoading}
         />
+        <VoicePrompt onTranscript={sendMessage} disabled={isLoading} />
         <button onClick={() => sendMessage(input)} className="send-button" disabled={isLoading}>
-          <Send size={24} />
+          <Send size={20} />
         </button>
       </div>
     </div>

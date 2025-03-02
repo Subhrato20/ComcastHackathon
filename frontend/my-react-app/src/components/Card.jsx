@@ -1,40 +1,51 @@
 import React, { useState } from 'react';
 import './Card.css';
 
-const Card = () => {
-  // Sample data - in a real implementation, this would come from your backend
-  const [responseData] = useState({
-    sources: [
-      {
-        id: 1,
-        title: "How to Build a Recommendation System",
-        url: "https://stratoflow.com/recommendation-system",
-        domain: "stratoflow",
-        logo: "/api/placeholder/24/24" // In production, use actual logo URLs
-      },
-      {
-        id: 2,
-        title: "Recommendation System Series Part 1: Architecture",
-        url: "https://towardsdatascience.com/recommendation-system-series",
-        domain: "towardsdatascience",
-        logo: "/api/placeholder/24/24"
-      },
-      {
-        id: 3,
-        title: "How to approach Recommendation Systems",
-        url: "https://reddit.com/r/machinelearning/recommendation",
-        domain: "reddit",
-        logo: "/api/placeholder/24/24"
-      }
-    ],
-    additionalSources: 4
-  });
+// This component will be used to display a popup with research data
+const ResearchPopup = ({ isOpen, onClose, data }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="research-popup-overlay">
+      <div className="research-popup">
+        <div className="research-popup-header">
+          <h3>Research Details</h3>
+          <button onClick={onClose} className="close-button">×</button>
+        </div>
+        <div className="research-popup-content">
+          {/* API data will be displayed here */}
+          <p>{data || "Loading research data..."}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Card = ({ sources }) => {
+  // State for managing the research popup
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [activeSourceId, setActiveSourceId] = useState(null);
+  
+  // This function would be called when research button is clicked
+  const handleResearchClick = (sourceId) => {
+    setActiveSourceId(sourceId);
+    setPopupOpen(true);
+    
+    // Here you would make the API call to get the research data based on sourceId
+    // Example:
+    // fetchResearchData(sourceId).then(data => setResearchData(data));
+  };
+  
+  // Function to handle redirect to search
+  const handleRedirectClick = (url) => {
+    window.open(url, '_blank');
+  };
 
   return (
     <div className="card-container">
       <div className="sources-section">
         <div className="sources-grid">
-          {responseData.sources.map(source => (
+          {sources.map(source => (
             <div key={source.id} className="source-card">
               <div className="source-header">
                 <h3 className="source-title">
@@ -43,22 +54,49 @@ const Card = () => {
                   </a>
                 </h3>
               </div>
+              <div className="source-content">
+                {/* If there's any brief content to show */}
+                {source.brief && <p className="source-brief">{source.brief}</p>}
+              </div>
               <div className="source-footer">
-                <div className="source-logo">
-                  <img src={source.logo} alt={source.domain} />
+                <div className="source-info">
+                  <div className="source-logo">
+                    <img src={source.logo} alt={source.domain} />
+                  </div>
+                  <span className="source-domain">{source.domain}</span>
                 </div>
-                <span className="source-domain">{source.domain}</span>
+                <div className="source-buttons">
+                  <button 
+                    className="source-button redirect-button" 
+                    onClick={() => handleRedirectClick(source.url)}
+                  >
+                    Search
+                  </button>
+                  <button 
+                    className="source-button research-button"
+                    onClick={() => handleResearchClick(source.id)}
+                  >
+                    Research
+                  </button>
+                </div>
               </div>
             </div>
           ))}
           
-          {responseData.additionalSources > 0 && (
+          {sources.additionalSources > 0 && (
             <div className="more-sources">
-              <span>+{responseData.additionalSources} sources</span>
+              <span>+{sources.additionalSources} sources</span>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Research popup */}
+      <ResearchPopup 
+        isOpen={popupOpen} 
+        onClose={() => setPopupOpen(false)} 
+        data={`Research data for source ${activeSourceId}`} 
+      />
     </div>
   );
 };

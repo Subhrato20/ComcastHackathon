@@ -63,7 +63,7 @@ body, html {
   flex-grow: 1;
   overflow-y: auto;
   padding-right: 10px;
-  margin-top: 250px;
+  margin-top: 20px;
   margin-bottom: 20px;
 }
 
@@ -96,12 +96,12 @@ body, html {
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
 }
 
 .message {
-  max-width: 80%;
-  padding: 10px;
+  max-width: 85%;
+  padding: 15px;
   border-radius: 20px;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -112,26 +112,45 @@ body, html {
   align-self: flex-end;
   color: black;
   border-radius: 20px;
+  background-color: #f0f2f5;
 }
 
 .bot-message {
   align-self: flex-start;
   color: black;
+  background-color: #f9f9f9;
+}
+
+.bot-message-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.sources-wrapper {
+  margin-bottom: 12px;
+}
+
+.bot-text {
+  margin-top: 8px;
 }
 
 .chat-input {
   display: flex;
+  align-items: center;
   gap: 10px;
   padding: 10px;
-  background-color: #f0f2f5;
+  background-color: #f5f5f5;
   border-radius: 25px;
+  margin-top: 20px;
+  
 }
 
 .message-input {
   flex-grow: 1;
-  padding: 15px;
+  padding: 10px 15px;
   border-radius: 25px;
-  border: 1px solid #ccc;
+  border: none;
+  background-color: white;
   font-size: 16px;
   outline: none;
 }
@@ -139,9 +158,9 @@ body, html {
 .send-button {
   color: #4299E1;
   border: none;
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  background: none;
+  width: 40px;
+  height: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -151,8 +170,14 @@ body, html {
 }
 
 .send-button:disabled {
-  background-color: #A0AEC0;
   cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.voice-prompt {
+  display: flex;
+  align-items: center;
+  margin-left: 5px;
 }
 
 /* Remove scrollbar styles */
